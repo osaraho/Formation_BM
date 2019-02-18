@@ -85,7 +85,9 @@ extractParamBM <- function(BMobject,Q){
     res$alpha <- BMobject$model_parameters[Q][[1]]$mu
 
   }
-  
+  if (model == 'bernoulli_multiplex') {
+    res$alpha <- BMobject$model_parameters[Q][[1]]$pi
+  }
   
   
   if (model == 'poisson_covariates') {
@@ -95,11 +97,11 @@ extractParamBM <- function(BMobject,Q){
     
   }
   if (model == 'bernoulli_covariates') { ### a vérifier???
-    res$alpha <- BMobject$model_parameters[Q][[1]]$pi
+    res$alpha <- BMobject$model_parameters[Q][[1]]$mu
     res$beta <-  BMobject$model_parameters[Q][[1]]$beta
   }
   if (model == 'gaussian_covariates') { ### a vérifier???
-    res$alpha <- BMobject$model_parameters[Q][[1]]$mu
+    res$alpha <- BMobject$model_parameters[Q][[1]]$pi
     res$beta <-  BMobject$model_parameters[Q][[1]]$beta
   }
   
@@ -111,11 +113,22 @@ extractParamBM <- function(BMobject,Q){
     n <- nrow(BMobject$memberships[[Q]]$Z)
     res$pi <-  colSums(BMobject$memberships[[Q]]$Z)/n
     
-    #relabelling
-    o <- order(res$alpha %*% matrix(res$pi,ncol = 1),decreasing = TRUE)
-    # res$pi <- res$pi[o];
-    # res$alpha <- res$alpha[o,o];
-    # res$Z <- res$Z[o]
+    o <- 1:length(res$pi)
+    if (model == "poisson") {
+      o <- order(res$lambda %*% matrix(res$pi,ncol = 1),decreasing = TRUE)
+      }
+    if ((model == "bernoulli") | (model == 'gaussian')){
+      o <- order(res$alpha %*% matrix(res$pi,ncol = 1),decreasing = TRUE)
+      }
+    #reordering clusters 
+    
+    resOrd <- res; 
+    resOrd$pi <- res$pi[o];
+    resOrd$alpha <- res$alpha[o,o];
+    if (model == 'poisson'){resOrd$lambda <- res$lambda[o,o]}
+    resOrd$Z <- o[res$Z]
+    resOrd$tau <- res$tau[,o]
+    res <- resOrd
   }
   
   if (membership_name == 'LBM'){
@@ -131,8 +144,24 @@ extractParamBM <- function(BMobject,Q){
     res$Q <- c(length(res$piRow ),length(res$piCol))
     names(res$Q) <- c('QRow','QCol')
     
+    if (model == "poisson") {
+      oCol <- order(res$lambda %*% matrix(res$piCol,ncol = 1),decreasing = TRUE)
+      oRow <- order(matrix(res$pirow,nrow = 1) %*%  res$lambda  ,decreasing = TRUE)
+    }
+    if ((model == "bernoulli") | (model == 'gaussian')){
+      o <- order(res$alpha %*% matrix(res$pi,ncol = 1),decreasing = TRUE)
+    }
+    
+    
+    # oRow <- order(res$alpha %*% matrix(res$piCol,ncol = 1),decreasing = TRUE)
+    # resOrd <- res; 
+    # resOrd$pi <- res$pi[o];
+    # resOrd$alpha <- res$alpha[o,o];
+    # resOrd$Z <- o[res$Z]
+    # resOrd$tau <- res$tau[,o]
+    
+    
   }
-  
   
   return(res)
 }
